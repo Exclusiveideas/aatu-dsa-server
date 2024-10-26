@@ -1,0 +1,23 @@
+# Ignore node_modules folder
+node_modules/
+
+# Ignore .env file
+.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Optional npm cache directory
+.npm/
+
+# Ignore coverage reports
+coverage/
+
+# Ignore production build
+dist/
+
+# Ignore IDE-specific files (optional)
+.vscode/
+.idea/
