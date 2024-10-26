@@ -19,7 +19,7 @@ import studentRoutes from "./routes/studentRoutes.js";
 app.use(express.json());
 app.use(
   cors({
-    origin: "*",
+    origin: "*", //https://techu-dsa.web.app/
   })
 );
 
@@ -49,7 +49,7 @@ app.get("/", (req, res) => {
 
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 
 mongoose.connection.once('open', () => {

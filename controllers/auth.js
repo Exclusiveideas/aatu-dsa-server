@@ -14,7 +14,7 @@ export const loginUser = async (req, res) => {
         const isPasswordCorrect = await bcrypt.compare(password, existingStudent.password);
         if(!isPasswordCorrect) return res.status(400).json({ message: "Wrong password."});
 
-        console.log('logging in user')
+        // console.log('logging in user')
 
         const token = jwt.sign({ matric: existingStudent.matric, id: existingStudent._id}, 'test', { expiresIn: "1h" });
 
@@ -42,7 +42,7 @@ export const registerUser = async (req, res) => {
         if(existingUser) return res.status(400).json({ message: "Matric already registered registered - Try logging in." });
 
         const hashedPassword = await bcrypt.hash(password, 16);
-        console.log('registering user')
+        // console.log('registering user')
 
         const newStudent = new Student({ 
             fullName: fullName,
@@ -93,7 +93,7 @@ export const resetPassword = async (req, res) => {
 
         if(!matched) return res.status(400).json({ message});
 
-        console.log('patching up user');
+        // console.log('patching up user');
         
         const newHashedPassword = await bcrypt.hash(newPassword, 16);
 

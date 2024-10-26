@@ -35,6 +35,9 @@ export const updatePassport = async (req, res) => {
   }
 };
 
+
+
+
 export const submitOyshia = async (req, res) => {
 
   const {
@@ -119,7 +122,6 @@ export const submitOyshia = async (req, res) => {
     if (!student) return res.status(404).json({ message: "Student not found" });
     if (student.OyshiaSubmitted) return res.status(404).json({ message: "Student has already submitted the OYSHIA form" });
 
-    console.log("updating Oyshia details.");
 
     // Update the student's Oyshia details 
     student.OyshiaDetails = oyshiaDetails;
@@ -133,7 +135,7 @@ export const submitOyshia = async (req, res) => {
         { new: true, upsert: true } // Return the updated document and create if not exists
       );
 
-
+ 
       // Assign Oyshia number to the student
       student.OyshiaDetails.set("oyshiaNumber", counterDoc.count);
       student.OyshiaSubmitted = true;
@@ -159,3 +161,22 @@ export const submitOyshia = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+
+export const fetchStudent = async (req, res) => {
+  const { matric } = req.query;
+  
+  if(!matric) return res.status(400).json({ message: "Student's matric is required." });
+
+  try {
+      const existingStudent = await Student.findOne({ matric: matric });
+
+      if(!existingStudent) return res.status(404).json({ message: "User doesn't exists - Try creating an account." });
+
+      res.status(200).json({ result: existingStudent })
+
+  } catch (error) {
+      res.status(500).json({ message: "Something went wrong, Try reloading the pages." })
+  }
+}
