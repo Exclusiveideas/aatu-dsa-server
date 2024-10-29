@@ -1,25 +1,20 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import connectDB from "./config/dbConn.js";
-import mongoose from "mongoose";
-
-// Set up express to parse JSON
-dotenv.config();
-
-// connect to DB
-connectDB();
-
-const app = express();
-
 import authRoutes from "./routes/authRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
+import './firebase/firebaseConfig.js';
 
+dotenv.config();
 
+// Initialize Express app
+const app = express();
+
+// Middleware
 app.use(express.json());
 app.use(
   cors({
-    origin: "*", //https://techu-dsa.web.app/
+    origin: "*",
   })
 );
 
@@ -29,31 +24,19 @@ app.use(function (req, res, next) {
     "Access-Control-Allow-Methods",
     "GET, POST, OPTIONS, PUT, PATCH, DELETE"
   );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-Requested-With,content-type"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "X-Requested-With,content-type");
   res.setHeader("Access-Control-Allow-Credentials", true);
   next();
 });
 
-
+// Routes
 app.use("/auth", authRoutes);
 app.use("/student", studentRoutes);
 
 app.get("/", (req, res) => {
-  res.send("AATU-DSA server running");
+  res.send("AATU-DSA server running with Firebase");
 });
-
-
-
-
 
 const PORT = process.env.PORT || 8080;
 
-
-mongoose.connection.once('open', () => {
-  console.log('connected to mongoDB')
-  app.listen(PORT, () => console.log(`Server running on port: ${PORT}`))
-
-})
+app.listen(PORT, () => console.log(`Server running on port: ${PORT}`));

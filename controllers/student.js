@@ -1,5 +1,4 @@
-import OyshiaCounter from "../models/oyshiaCounter.js";
-import Student from "../models/student.js";
+import { db } from "../firebase/firebaseConfig.js";
 
 export const updatePassport = async (req, res) => {
   const { matric, downloadUrl } = req.body;
@@ -7,158 +6,98 @@ export const updatePassport = async (req, res) => {
   if (!matric || !downloadUrl)
     return res
       .status(400)
-      .json({ message: "Error - provide all required info." });
+      .json({ message: "Please provide all required info." });
 
   try {
-    const existingUser = await Student.findOne({ matric: matric });
+    const studentRef = db.collection("students").where("matric", "==", matric);
+    const snapshot = await studentRef.get();
 
-    if (!existingUser)
+    if (snapshot.empty) {
       return res
         .status(404)
         .json({ message: "User with this matric isn't registered." });
+    }
 
-    console.log("patching up user");
-
-    const result = await Student.updateOne(
-      { _id: existingUser?._id },
-      { $set: { imageLink: downloadUrl } }
-    );
+    // Assuming only one student will be returned
+    const studentDoc = snapshot.docs[0];
+    await studentDoc.ref.update({ imageLink: downloadUrl });
 
     res.status(200).json({ result: "successful" });
   } catch (error) {
     res
       .status(500)
       .json({
-        message: "Something went wrong, Try reloading the page. ",
+        message: "Something went wrong, Try reloading the page.",
         error,
       });
   }
 };
 
 
-
-
 export const submitOyshia = async (req, res) => {
+  const { studentMatric, ...oyshiaDetails } = req.body;
 
-  const {
-    studentId,
-    surname,
-    othername,
-    sex,
-    dob,
-    maritalStatus,
-    phoneNumber,
-    IDMeans,
-    IDNumber,
-    matricNo,
-    emailAddress,
-    faculty,
-    department,
-    stateOfOrigin,
-    lga,
-    genotype,
-    bloodGroup,
-    medicalConditions,
-    nextOfKinName,
-    nextOfKinNumber,
-    nextOfKinAddress,
-  } = req.body;
-
-  if (
-    !studentId ||
-    !surname ||
-    !othername ||
-    !sex ||
-    !dob ||
-    !maritalStatus ||
-    !phoneNumber ||
-    !IDMeans ||
-    !IDNumber ||
-    !matricNo ||
-    !emailAddress ||
-    !faculty ||
-    !department ||
-    !stateOfOrigin ||
-    !lga ||
-    !genotype ||
-    !bloodGroup ||
-    !medicalConditions ||
-    !nextOfKinName ||
-    !nextOfKinNumber ||
-    !nextOfKinAddress
-  )
+  // Check for required fields
+  if (!studentMatric || Object.values(oyshiaDetails).some((value) => !value)) {
     return res
       .status(400)
       .json({
         message: "Incomplete User details - provide all required info.",
       });
-
-    const oyshiaDetails = {
-        surname,
-        othername,
-        sex,
-        dob,
-        maritalStatus,
-        phoneNumber,
-        IDMeans,
-        IDNumber,
-        matricNo,
-        emailAddress,
-        faculty,
-        department,
-        stateOfOrigin,
-        lga,
-        genotype,
-        bloodGroup,
-        medicalConditions,
-        nextOfKinName,
-        nextOfKinNumber,
-        nextOfKinAddress,
-    }
+  }
 
   try {
-    const student = await Student.findById(studentId);
+    // Fetch the student document using matric
+    const studentRef = db
+      .collection("students")
+      .where("matric", "==", studentMatric);
+    const studentSnapshot = await studentRef.get();
 
-    if (!student) return res.status(404).json({ message: "Student not found" });
-    if (student.OyshiaSubmitted) return res.status(404).json({ message: "Student has already submitted the OYSHIA form" });
+    if (studentSnapshot.empty) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    const studentDoc = studentSnapshot.docs[0]; // Get the first matching student document
+    const studentData = studentDoc.data();
+
+    // Check if the student has already submitted the OYSHIA form
+    if (studentData.OyshiaSubmitted) {
+      return res
+        .status(400)
+        .json({ message: "Student has already submitted the OYSHIA form" });
+    }
 
 
-    // Update the student's Oyshia details 
-    student.OyshiaDetails = oyshiaDetails;
+    // Update the student's Oyshia details and mark as submitted
+    await db.collection("students").doc(studentDoc.id).update({
+      OyshiaDetails: oyshiaDetails,
+      OyshiaSubmitted: true,
+    });
 
     // Check if the student is in 100 level
-    if (student?.level === "100") {
-      // Find the Oyshia counter and increment it, assign the new value to the student
-      const counterDoc = await OyshiaCounter.findOneAndUpdate(
-        {}, // Find the single document
-        { $inc: { count: 1 } }, // Increment the counter
-        { new: true, upsert: true } // Return the updated document and create if not exists
-      );
+    if (studentData.level === "100") {
+      const counterRef = db.collection("oyshiaCounter").doc("oyshiaCounterDoc"); // Use the specific doc ID for the counter
+      const counterDoc = await counterRef.get();
 
- 
-      // Assign Oyshia number to the student
-      student.OyshiaDetails.set("oyshiaNumber", counterDoc.count);
-      student.OyshiaSubmitted = true;
-      const updatedStudent = await student.save();
+      // Increment the counter
+      const newCount = (counterDoc.exists ? counterDoc.data().count : 0) + 1;
+      await counterRef.set({ count: newCount });
 
-
-      return res.status(200).json({
-        message: "Oyshia details submitted and Oyshia number has been assigned.",
-        updatedStudent,
-      });
-    } else {
-      // For students not in 100 level, just save their Oyshia details without assigning a number
-      student.OyshiaSubmitted = true;
-      const updatedStudent = await student.save();
-
-      return res.status(200).json({
-        message: "Oyshia details submitted, but no Oyshia number assigned.",
-        updatedStudent
-      });
+      // Assign the oyshiaNumber to the student
+      await db.collection('students').doc(studentDoc.id).update({ 'OyshiaDetails.oyshiaNumber': newCount });
     }
+
+      // Fetch the updated student document
+      const updatedStudentDoc = await db.collection('students').doc(studentDoc.id).get();
+      const updatedStudentData = updatedStudentDoc.data();
+  
+      return res.status(200).json({
+        message: "Oyshia details submitted successfully.",
+        updatedStudent: updatedStudentData,
+      });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -166,17 +105,24 @@ export const submitOyshia = async (req, res) => {
 
 export const fetchStudent = async (req, res) => {
   const { matric } = req.query;
-  
-  if(!matric) return res.status(400).json({ message: "Student's matric is required." });
+
+  if (!matric)
+    return res.status(400).json({ message: "Student's matric is required." });
 
   try {
-      const existingStudent = await Student.findOne({ matric: matric });
+    const studentRef = db.collection("students").where("matric", "==", matric);
+    const snapshot = await studentRef.get();
 
-      if(!existingStudent) return res.status(404).json({ message: "User doesn't exists - Try creating an account." });
+    if (snapshot.empty)
+      return res
+        .status(404)
+        .json({ message: "User doesn't exist - Try creating an account." });
 
-      res.status(200).json({ result: existingStudent })
-
+    const studentData = snapshot.docs[0].data();
+    res.status(200).json({ result: studentData });
   } catch (error) {
-      res.status(500).json({ message: "Something went wrong, Try reloading the pages." })
+    res
+      .status(500)
+      .json({ message: "Something went wrong, Try reloading the page." });
   }
-}
+};
