@@ -58,7 +58,7 @@ export const registerUser = async (req, res) => {
             level,
             gender,
             password: hashedPassword,
-            bedSpace: null,
+            bedSpace: {},
             OyshiaSubmitted: false,
             OyshiaDetails: {},
         };
