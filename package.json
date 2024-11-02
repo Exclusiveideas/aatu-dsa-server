@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "A student management system using MVC architecture",
   "main": "app.js",
-  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node app.js",
@@ -22,7 +21,8 @@
     "firebase": "^11.0.1",
     "firebase-admin": "^12.7.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.7.1"
+    "mongoose": "^8.7.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.5"
